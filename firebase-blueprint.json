@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "A company profile containing brand settings and templates.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the company."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this company profile."
+        },
+        "brandSettings": {
+          "type": "object",
+          "properties": {
+            "primaryColor": { "type": "string" },
+            "secondaryColor": { "type": "string" },
+            "accentColor": { "type": "string" },
+            "logoUrl": { "type": "string" },
+            "logoPosition": { "type": "string" },
+            "companyType": { "type": "string" },
+            "targetAudience": { "type": "string" },
+            "toneOfVoice": { "type": "string" },
+            "companyDescription": { "type": "string" },
+            "usp": { "type": "string" },
+            "visualStyleType": { "type": "string" },
+            "illustrationStyle": { "type": "string" },
+            "defaultHashtags": { "type": "string" }
+          }
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "html": { "type": "string" },
+              "css": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "ownerId", "brandSettings", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": { "$ref": "#/entities/Company" },
+      "description": "Stores company profiles for users."
+    }
+  }
+}
