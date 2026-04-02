@@ -37,9 +37,6 @@ const DEFAULT_CONTENT: GeneratedContent = {
 };
 
 export default function App() {
-  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
-  const [checkingKey, setCheckingKey] = useState<boolean>(true);
-  
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null);
@@ -89,27 +86,6 @@ export default function App() {
   const customTemplate = activeCompany?.templates?.find(t => t.id === selectedLayout);
 
   useEffect(() => {
-    const checkKey = async () => {
-      const win = window as any;
-      let attempts = 0;
-      while (!win.aistudio && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      if (win.aistudio) {
-        try {
-          const hasKey = await win.aistudio.hasSelectedApiKey();
-          setHasApiKey(hasKey);
-        } catch (e) {
-          console.error("Error checking for API key:", e);
-        }
-      } else {
-        setHasApiKey(true);
-      }
-      setCheckingKey(false);
-    };
-    checkKey();
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
@@ -288,10 +264,6 @@ export default function App() {
     updateSlideContent(activeSlideIndex, field, value);
   };
 
-  if (checkingKey) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
-  }
-
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
@@ -300,25 +272,6 @@ export default function App() {
             <p className="text-slate-400 mb-8">Sign in to manage your companies and templates.</p>
             <button onClick={handleLogin} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl">
               Sign in with Google
-            </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasApiKey) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
-        <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
-            <h1 className="text-2xl font-bold text-white mb-4">Connect API Key</h1>
-            <button onClick={async () => {
-              const win = window as any;
-              if (win.aistudio) {
-                await win.aistudio.openSelectKey();
-                setHasApiKey(true);
-              }
-            }} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl">
-              Connect Gemini API
             </button>
         </div>
       </div>

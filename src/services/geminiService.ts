@@ -1,12 +1,20 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { GeneratedContent, BrandSettings } from '../types';
 
+const getApiKey = () => {
+  const key = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!key) {
+    throw new Error('VITE_GEMINI_API_KEY is not configured. Please add it to your environment variables.');
+  }
+  return key;
+};
+
 export async function generateAllLayoutsText(
   prompt: string, 
   isCarousel: boolean, 
   brandContext: BrandSettings
 ): Promise<Record<string, Partial<GeneratedContent> | Partial<GeneratedContent>[]>> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   
   const systemInstruction = `You are an expert social media copywriter.
 Create content for a brand with the following profile:
@@ -54,7 +62,7 @@ Return JSON matching the requested schema.`;
 }
 
 export async function analyzeCompanyContext(text: string): Promise<Partial<BrandSettings> & { companyName?: string }> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   
   // Truncate text to prevent massive inputs that could cause token limits or huge outputs
   const truncatedText = text.length > 15000 ? text.substring(0, 15000) + '... [text truncated]' : text;
@@ -106,7 +114,7 @@ Return a JSON object with the following fields:
 }
 
 export async function generateBrandImage(prompt: string, size: string, aspectRatio: string): Promise<string | null> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
