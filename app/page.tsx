@@ -3,8 +3,16 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function Home() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data?.user
+    console.log("[v0] Homepage - user:", user?.email || "not logged in")
+  } catch (error) {
+    console.log("[v0] Homepage - Supabase error:", error)
+  }
 
   if (user) {
     redirect('/dashboard')
