@@ -37,6 +37,7 @@ export default function CompanySettingsModal({
 
   const loadSettings = async () => {
     setLoading(true)
+    console.log("[v0] CompanySettings - Loading settings for company:", companyId)
     
     // Load company enabled layouts
     const { data: company } = await supabase
@@ -44,6 +45,8 @@ export default function CompanySettingsModal({
       .select('enabled_layouts')
       .eq('id', companyId)
       .single()
+    
+    console.log("[v0] CompanySettings - Company data:", company)
     
     if (company?.enabled_layouts) {
       setEnabledLayouts(company.enabled_layouts as LayoutType[])
@@ -53,10 +56,13 @@ export default function CompanySettingsModal({
     }
 
     // Load templates
-    const { data: templateData } = await supabase
+    const { data: templateData, error: templateError } = await supabase
       .from('custom_templates')
       .select('*')
       .eq('company_id', companyId)
+    
+    console.log("[v0] CompanySettings - Templates loaded:", templateData)
+    console.log("[v0] CompanySettings - Template error:", templateError)
     
     if (templateData) {
       setTemplates(templateData)
@@ -94,13 +100,18 @@ export default function CompanySettingsModal({
     const file = e.target.files?.[0]
     if (!file) return
 
+    console.log("[v0] CompanySettings - Uploading template:", { fileName: file.name, layoutType, companyId })
+
     const text = await file.text()
+    console.log("[v0] CompanySettings - Template HTML length:", text.length)
     
     // Check if template already exists for this layout
     const existingTemplate = templates.find(t => t.layout_type === layoutType)
+    console.log("[v0] CompanySettings - Existing template:", existingTemplate?.id || 'none')
     
     if (existingTemplate) {
       // Update existing template
+      console.log("[v0] CompanySettings - Updating existing template:", existingTemplate.id)
       const { error } = await supabase
         .from('custom_templates')
         .update({ 
@@ -110,12 +121,14 @@ export default function CompanySettingsModal({
         })
         .eq('id', existingTemplate.id)
       
+      console.log("[v0] CompanySettings - Update error:", error)
       if (!error) {
         loadSettings()
       }
     } else {
       // Create new template
-      const { error } = await supabase
+      console.log("[v0] CompanySettings - Creating new template for", layoutType)
+      const { data, error } = await supabase
         .from('custom_templates')
         .insert({
           company_id: companyId,
@@ -125,6 +138,10 @@ export default function CompanySettingsModal({
           layout_type: layoutType,
           is_active: true
         })
+        .select()
+      
+      console.log("[v0] CompanySettings - Insert data:", data)
+      console.log("[v0] CompanySettings - Insert error:", error)
       
       if (!error) {
         loadSettings()

@@ -61,6 +61,8 @@ const Artboard = forwardRef<HTMLDivElement, ArtboardProps>(({
 
   const renderContent = () => {
     if (customTemplate) {
+      console.log("[v0] Artboard - Rendering custom template:", { templateId: customTemplate.id, templateName: customTemplate.name })
+      
       const templateData = {
         ...content,
         brand: brandSettings,
@@ -71,14 +73,20 @@ const Artboard = forwardRef<HTMLDivElement, ArtboardProps>(({
 
       try {
         let cleanHtml = customTemplate.html;
+        console.log("[v0] Artboard - Original HTML length:", cleanHtml.length)
+        
         const bodyMatch = cleanHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
         if (bodyMatch) {
           cleanHtml = bodyMatch[1];
+          console.log("[v0] Artboard - Extracted body content, new length:", cleanHtml.length)
         }
+        
         cleanHtml = cleanHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
         cleanHtml = cleanHtml.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
         const renderedHtml = Mustache.render(cleanHtml, templateData);
+        console.log("[v0] Artboard - Rendered HTML length:", renderedHtml.length)
+        
         const scopedCssId = `custom-template-${customTemplate.id}-${slideIndex}`;
         const scopedCss = customTemplate.css.replace(/([^\{\}]+)\{/g, (match, selector) => {
           const selectors = selector.split(',').map((s: string) => `#${scopedCssId} ${s.trim()}`).join(', ');
@@ -111,8 +119,8 @@ const Artboard = forwardRef<HTMLDivElement, ArtboardProps>(({
           </div>
         );
       } catch (e) {
-        console.error("Error rendering custom template", e);
-        return <div className="p-10 text-red-500">Error rendering template</div>;
+        console.error("[v0] Artboard - Error rendering custom template:", e);
+        return <div className="p-10 text-red-500">Error rendering template: {String(e)}</div>;
       }
     }
 

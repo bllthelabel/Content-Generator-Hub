@@ -19,6 +19,7 @@ import {
   GenerationMode,
   BrandSettings,
   Company,
+  CustomTemplate,
   LAYOUT_DEFAULTS,
   DEFAULT_BRAND_SETTINGS,
   DEFAULT_CONTENT,
@@ -72,6 +73,8 @@ export default function DashboardPage() {
   const [visibility, setVisibility] = useState<ContentVisibility>({
     tagline: true, headline: true, subtext: true, body: true, cta: true, icon: true, logo: true, box: true
   })
+
+  const [customTemplate, setCustomTemplate] = useState<CustomTemplate | undefined>()
 
   const artboardRefs = useRef<(HTMLDivElement | null)[]>([])
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -155,11 +158,32 @@ export default function DashboardPage() {
     }
   }
 
-  const handleLayoutChange = (newLayout: LayoutType) => {
+  const handleLayoutChange = async (newLayout: LayoutType) => {
+    console.log("[v0] Dashboard - Layout changed to:", newLayout)
+    
     if (generatedLayouts) {
       setGeneratedLayouts(prev => ({ ...prev!, [selectedLayout]: slides }))
     }
     setSelectedLayout(newLayout)
+
+    // Load template for this layout if it exists
+    if (activeCompanyId) {
+      const { data: template, error } = await supabase
+        .from('custom_templates')
+        .select('*')
+        .eq('company_id', activeCompanyId)
+        .eq('layout_type', newLayout)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) {
+        console.log("[v0] Dashboard - No active template for layout:", newLayout)
+        setCustomTemplate(undefined)
+      } else {
+        console.log("[v0] Dashboard - Template loaded:", { templateId: template?.id, layoutType: newLayout })
+        setCustomTemplate(template as CustomTemplate)
+      }
+    }
 
     if (generatedLayouts && generatedLayouts[newLayout]) {
       const newLayoutSlides = generatedLayouts[newLayout].map((slide, index) => {
@@ -620,6 +644,7 @@ export default function DashboardPage() {
               totalSlides={slides.length}
               isImageSpread={isImageSpread}
               brandSettings={brandSettings}
+              customTemplate={customTemplate}
             />
           </div>
         </div>
