@@ -1,7 +1,6 @@
 'use client'
 
 import { forwardRef } from 'react';
-import Mustache from 'mustache';
 import { LayoutType, AspectRatio, GeneratedContent, ContentVisibility, BrandSettings, CustomTemplate } from '@/lib/types';
 import BrandLogo from './BrandLogo';
 
@@ -60,68 +59,79 @@ const Artboard = forwardRef<HTMLDivElement, ArtboardProps>(({
   } as React.CSSProperties;
 
   const renderContent = () => {
-    if (customTemplate) {
-      console.log("[v0] Artboard - Rendering custom template:", { templateId: customTemplate.id, templateName: customTemplate.name })
-      
-      const templateData = {
-        ...content,
-        brand: brandSettings,
-        isDarkMode,
-        slideIndex: slideIndex + 1,
-        totalSlides
-      };
-
-      try {
-        let cleanHtml = customTemplate.html;
-        console.log("[v0] Artboard - Original HTML length:", cleanHtml.length)
-        
-        const bodyMatch = cleanHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-        if (bodyMatch) {
-          cleanHtml = bodyMatch[1];
-          console.log("[v0] Artboard - Extracted body content, new length:", cleanHtml.length)
-        }
-        
-        cleanHtml = cleanHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-        cleanHtml = cleanHtml.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-
-        const renderedHtml = Mustache.render(cleanHtml, templateData);
-        console.log("[v0] Artboard - Rendered HTML length:", renderedHtml.length)
-        
-        const scopedCssId = `custom-template-${customTemplate.id}-${slideIndex}`;
-        const scopedCss = customTemplate.css.replace(/([^\{\}]+)\{/g, (match, selector) => {
-          const selectors = selector.split(',').map((s: string) => `#${scopedCssId} ${s.trim()}`).join(', ');
-          return `${selectors} {`;
-        });
-
-        let baseWidth = 540;
-        let baseHeight = 540;
-        switch (format) {
-          case 'SQUARE': baseWidth = 540; baseHeight = 540; break;
-          case 'PORTRAIT': baseWidth = 540; baseHeight = 675; break;
-          case 'STORY': baseWidth = 540; baseHeight = 960; break;
-          case 'LANDSCAPE': baseWidth = 960; baseHeight = 540; break;
-        }
-
-        return (
-          <div className="absolute inset-0 z-10 overflow-hidden">
-            <div 
-              id={scopedCssId} 
-              style={{ 
-                width: `${baseWidth}px`, 
-                height: `${baseHeight}px`, 
-                transform: 'scale(2)', 
-                transformOrigin: 'top left' 
-              }}
-            >
-              <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
-              <div dangerouslySetInnerHTML={{ __html: renderedHtml }} className="w-full h-full" />
+    // If custom template has an image, render it as background with content overlay
+    if (customTemplate?.image_url) {
+      return (
+        <div className="absolute inset-0 z-10">
+          {/* Template background image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src={customTemplate.image_url} 
+            alt="Template" 
+            className="w-full h-full object-cover"
+            crossOrigin="anonymous"
+          />
+          
+          {/* Content overlay - positioned based on layout */}
+          <div className="absolute inset-0 flex flex-col p-16">
+            {visibility.logo && (
+              <div className={`absolute ${getLogoPositionClasses()}`}>
+                <BrandLogo logoUrl={brandSettings.logo_url} className="w-20 h-20" white={isDarkMode} />
+              </div>
+            )}
+            
+            <div className="flex-1 flex flex-col justify-center items-center text-center px-12">
+              {visibility.tagline && content.tagline && (
+                <div 
+                  className="text-xl font-bold uppercase tracking-widest mb-4 px-4 py-2 rounded-lg"
+                  style={{ 
+                    color: brandSettings.primary_color,
+                    backgroundColor: `${brandSettings.primary_color}15`
+                  }}
+                >
+                  {content.tagline}
+                </div>
+              )}
+              
+              {visibility.headline && content.headline && (
+                <h1 
+                  className="text-5xl font-extrabold leading-tight mb-6 drop-shadow-lg"
+                  style={{ color: isDarkMode ? '#ffffff' : brandSettings.secondary_color }}
+                >
+                  {content.headline}
+                </h1>
+              )}
+              
+              {visibility.body && content.body && (
+                <p 
+                  className="text-2xl leading-relaxed max-w-2xl mb-8 drop-shadow"
+                  style={{ color: isDarkMode ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)' }}
+                >
+                  {content.body}
+                </p>
+              )}
+              
+              {visibility.cta && content.cta && (
+                <div 
+                  className="px-8 py-4 rounded-full text-xl font-bold text-white shadow-lg"
+                  style={{ backgroundColor: brandSettings.accent_color }}
+                >
+                  {content.cta}
+                </div>
+              )}
             </div>
+
+            {visibility.subtext && content.subtext && (
+              <div 
+                className="text-lg font-medium text-center"
+                style={{ color: isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}
+              >
+                {content.subtext}
+              </div>
+            )}
           </div>
-        );
-      } catch (e) {
-        console.error("[v0] Artboard - Error rendering custom template:", e);
-        return <div className="p-10 text-red-500">Error rendering template: {String(e)}</div>;
-      }
+        </div>
+      );
     }
 
     return (

@@ -40,6 +40,7 @@ export interface CustomTemplate {
   css: string;
   layout_type?: LayoutType;
   is_active?: boolean;
+  image_url?: string;
 }
 
 export interface BrandSettings {

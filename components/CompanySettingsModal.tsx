@@ -24,7 +24,7 @@ export default function CompanySettingsModal({
   
   const [activeTab, setActiveTab] = useState<'layouts' | 'templates'>('layouts')
   const [enabledLayouts, setEnabledLayouts] = useState<LayoutType[]>([])
-  const [templates, setTemplates] = useState<(CustomTemplate & { layout_type?: string; is_active?: boolean })[]>([])
+  const [templates, setTemplates] = useState<CustomTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingFor, setUploadingFor] = useState<LayoutType | null>(null)
@@ -37,7 +37,6 @@ export default function CompanySettingsModal({
 
   const loadSettings = async () => {
     setLoading(true)
-    console.log("[v0] CompanySettings - Loading settings for company:", companyId)
     
     // Load company enabled layouts
     const { data: company } = await supabase
@@ -45,8 +44,6 @@ export default function CompanySettingsModal({
       .select('enabled_layouts')
       .eq('id', companyId)
       .single()
-    
-    console.log("[v0] CompanySettings - Company data:", company)
     
     if (company?.enabled_layouts) {
       setEnabledLayouts(company.enabled_layouts as LayoutType[])
@@ -56,16 +53,13 @@ export default function CompanySettingsModal({
     }
 
     // Load templates
-    const { data: templateData, error: templateError } = await supabase
+    const { data: templateData } = await supabase
       .from('custom_templates')
       .select('*')
       .eq('company_id', companyId)
     
-    console.log("[v0] CompanySettings - Templates loaded:", templateData)
-    console.log("[v0] CompanySettings - Template error:", templateError)
-    
     if (templateData) {
-      setTemplates(templateData)
+      setTemplates(templateData as CustomTemplate[])
     }
 
     setLoading(false)
@@ -96,56 +90,34 @@ export default function CompanySettingsModal({
     setSaving(false)
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, layoutType: LayoutType) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, layoutType: LayoutType) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    console.log("[v0] CompanySettings - Uploading template:", { fileName: file.name, layoutType, companyId })
+    setUploadingFor(layoutType)
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('companyId', companyId)
+      formData.append('layoutType', layoutType)
 
-    const text = await file.text()
-    console.log("[v0] CompanySettings - Template HTML length:", text.length)
-    
-    // Check if template already exists for this layout
-    const existingTemplate = templates.find(t => t.layout_type === layoutType)
-    console.log("[v0] CompanySettings - Existing template:", existingTemplate?.id || 'none')
-    
-    if (existingTemplate) {
-      // Update existing template
-      console.log("[v0] CompanySettings - Updating existing template:", existingTemplate.id)
-      const { error } = await supabase
-        .from('custom_templates')
-        .update({ 
-          html: text, 
-          name: file.name.replace('.html', ''),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingTemplate.id)
-      
-      console.log("[v0] CompanySettings - Update error:", error)
-      if (!error) {
+      const response = await fetch('/api/upload-template', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
         loadSettings()
+        onUpdate()
+      } else {
+        const error = await response.json()
+        console.error('Upload failed:', error)
+        alert('Upload mislukt: ' + (error.error || 'Onbekende fout'))
       }
-    } else {
-      // Create new template
-      console.log("[v0] CompanySettings - Creating new template for", layoutType)
-      const { data, error } = await supabase
-        .from('custom_templates')
-        .insert({
-          company_id: companyId,
-          name: file.name.replace('.html', ''),
-          html: text,
-          css: '',
-          layout_type: layoutType,
-          is_active: true
-        })
-        .select()
-      
-      console.log("[v0] CompanySettings - Insert data:", data)
-      console.log("[v0] CompanySettings - Insert error:", error)
-      
-      if (!error) {
-        loadSettings()
-      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      alert('Upload mislukt')
     }
     
     setUploadingFor(null)
@@ -154,14 +126,20 @@ export default function CompanySettingsModal({
     }
   }
 
-  const deleteTemplate = async (templateId: string) => {
-    const { error } = await supabase
-      .from('custom_templates')
-      .delete()
-      .eq('id', templateId)
-    
-    if (!error) {
-      loadSettings()
+  const deleteTemplateImage = async (templateId: string, imageUrl?: string) => {
+    try {
+      const response = await fetch('/api/upload-template', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId, imageUrl })
+      })
+
+      if (response.ok) {
+        loadSettings()
+        onUpdate()
+      }
+    } catch (err) {
+      console.error('Delete error:', err)
     }
   }
 
@@ -173,6 +151,7 @@ export default function CompanySettingsModal({
     
     if (!error) {
       loadSettings()
+      onUpdate()
     }
   }
 
@@ -220,8 +199,8 @@ export default function CompanySettingsModal({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <i className="fas fa-code mr-2"></i>
-            HTML Templates
+            <i className="fas fa-image mr-2"></i>
+            Template Afbeeldingen
           </button>
         </div>
 
@@ -287,63 +266,77 @@ export default function CompanySettingsModal({
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground mb-4">
-                Upload een eigen HTML template per layout type. Het template wordt gebruikt in plaats van de standaard layout.
+                Upload een afbeelding per layout als template achtergrond. De content wordt over de afbeelding geplaatst.
               </p>
 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".html"
+                accept="image/*"
                 className="hidden"
-                onChange={(e) => uploadingFor && handleFileUpload(e, uploadingFor)}
+                onChange={(e) => uploadingFor && handleImageUpload(e, uploadingFor)}
               />
 
               <div className="space-y-3">
                 {LAYOUT_OPTIONS.map(layout => {
                   const template = getTemplateForLayout(layout.id)
+                  const hasImage = template?.image_url
+                  const isUploading = uploadingFor === layout.id
                   
                   return (
                     <div
                       key={layout.id}
                       className="p-4 rounded-xl border border-border bg-card"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-secondary-foreground">
-                            <i className={`fas ${layout.icon}`}></i>
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">{layout.label}</div>
-                            {template ? (
-                              <div className="text-xs text-green-500 flex items-center gap-1">
-                                <i className="fas fa-check-circle"></i>
-                                {template.name}.html
-                              </div>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">
-                                Geen template - gebruikt standaard
-                              </div>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-4">
+                        {/* Preview */}
+                        <div className="w-20 h-20 rounded-lg border border-border overflow-hidden bg-secondary flex-shrink-0">
+                          {hasImage ? (
+                            <img 
+                              src={template.image_url} 
+                              alt={layout.label}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <i className={`fas ${layout.icon} text-xl`}></i>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-foreground">{layout.label}</div>
+                          {hasImage ? (
+                            <div className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                              <i className="fas fa-check-circle"></i>
+                              Afbeelding geupload
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Geen template - gebruikt standaard layout
+                            </div>
+                          )}
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          {template && (
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {hasImage && (
                             <>
                               <button
-                                onClick={() => toggleTemplateActive(template.id, template.is_active ?? true)}
+                                onClick={() => template && toggleTemplateActive(template.id, template.is_active ?? true)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                  template.is_active
+                                  template?.is_active
                                     ? 'bg-green-500/20 text-green-500'
                                     : 'bg-secondary text-muted-foreground'
                                 }`}
                               >
-                                {template.is_active ? 'Actief' : 'Inactief'}
+                                {template?.is_active ? 'Actief' : 'Inactief'}
                               </button>
                               <button
-                                onClick={() => deleteTemplate(template.id)}
+                                onClick={() => template && deleteTemplateImage(template.id, template.image_url)}
                                 className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Verwijder template"
+                                title="Verwijder afbeelding"
                               >
                                 <i className="fas fa-trash"></i>
                               </button>
@@ -354,16 +347,35 @@ export default function CompanySettingsModal({
                               setUploadingFor(layout.id)
                               fileInputRef.current?.click()
                             }}
-                            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
+                            disabled={isUploading}
+                            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                           >
-                            <i className="fas fa-upload mr-1"></i>
-                            {template ? 'Vervangen' : 'Upload'}
+                            {isUploading ? (
+                              <>
+                                <i className="fas fa-spinner fa-spin mr-1"></i>
+                                Uploaden...
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-upload mr-1"></i>
+                                {hasImage ? 'Vervangen' : 'Upload'}
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
                     </div>
                   )
                 })}
+              </div>
+
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 mt-6">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-info-circle text-primary mt-0.5"></i>
+                  <div className="text-sm text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> Upload afbeeldingen met een resolutie van minimaal 1080x1080 pixels voor de beste kwaliteit. De gegenereerde content wordt automatisch over de afbeelding geplaatst.
+                  </div>
+                </div>
               </div>
             </div>
           )}

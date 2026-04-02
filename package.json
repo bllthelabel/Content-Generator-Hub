@@ -12,6 +12,7 @@
     "@google/genai": "^1.48.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/blob": "^2.3.3",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.546.0",
     "mustache": "^4.2.0",
