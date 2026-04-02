@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Artboard from '@/components/Artboard'
+import AddCompanyModal from '@/components/AddCompanyModal'
 import {
   LayoutType,
   AspectRatio,
@@ -47,7 +48,6 @@ export default function DashboardPage() {
   
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [showCompanyModal, setShowCompanyModal] = useState(false)
-  const [newCompanyName, setNewCompanyName] = useState('')
 
   const [activeTab, setActiveTab] = useState<'DESIGN' | 'CONTENT'>('CONTENT')
   const [brandSettings, setBrandSettings] = useState<BrandSettings>(DEFAULT_BRAND_SETTINGS)
@@ -93,21 +93,33 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  const handleCreateCompany = async () => {
-    if (!newCompanyName.trim()) return
-    
+  const handleCreateCompany = async (formData: {
+    name: string
+    description: string
+    targetAudience: string
+    usp: string
+    toneOfVoice: string
+    outputLanguage: string
+  }) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     const { data: company, error } = await supabase
       .from('companies')
-      .insert({ name: newCompanyName, owner_id: user.id })
+      .insert({ 
+        name: formData.name, 
+        owner_id: user.id,
+        description: formData.description,
+        target_audience: formData.targetAudience,
+        usp: formData.usp,
+        tone_of_voice: formData.toneOfVoice,
+        output_language: formData.outputLanguage
+      })
       .select()
       .single()
 
     if (!error && company) {
       setActiveCompanyId(company.id)
-      setNewCompanyName('')
       setShowCompanyModal(false)
       mutate()
     }
@@ -271,28 +283,11 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
       {/* Company Modal */}
-      {showCompanyModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-xl font-bold text-white">Nieuw Bedrijf</h2>
-            <input
-              type="text"
-              placeholder="Bedrijfsnaam"
-              value={newCompanyName}
-              onChange={(e) => setNewCompanyName(e.target.value)}
-              className="w-full px-4 py-3 bg-input border border-border rounded-xl text-foreground"
-            />
-            <div className="flex gap-3">
-              <button onClick={handleCreateCompany} className="flex-1 py-3 bg-primary text-primary-foreground rounded-xl font-medium">
-                Aanmaken
-              </button>
-              <button onClick={() => setShowCompanyModal(false)} className="flex-1 py-3 bg-secondary text-secondary-foreground rounded-xl font-medium">
-                Annuleren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddCompanyModal
+        isOpen={showCompanyModal}
+        onClose={() => setShowCompanyModal(false)}
+        onSubmit={handleCreateCompany}
+      />
 
       {/* Sidebar */}
       <aside className="w-[400px] flex flex-col border-r border-border bg-card z-20 shadow-2xl">
