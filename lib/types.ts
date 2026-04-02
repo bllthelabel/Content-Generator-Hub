@@ -38,6 +38,8 @@ export interface CustomTemplate {
   name: string;
   html: string;
   css: string;
+  layout_type?: LayoutType;
+  is_active?: boolean;
 }
 
 export interface BrandSettings {
@@ -62,6 +64,12 @@ export interface Company {
   id: string;
   name: string;
   owner_id: string;
+  description?: string;
+  target_audience?: string;
+  usp?: string;
+  tone_of_voice?: string;
+  output_language?: string;
+  enabled_layouts?: LayoutType[];
   brand_settings?: BrandSettings;
   templates?: CustomTemplate[];
   created_at: string;

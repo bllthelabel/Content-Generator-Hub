@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Artboard from '@/components/Artboard'
 import AddCompanyModal from '@/components/AddCompanyModal'
+import CompanySettingsModal from '@/components/CompanySettingsModal'
 import {
   LayoutType,
   AspectRatio,
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [showCompanyModal, setShowCompanyModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const [activeTab, setActiveTab] = useState<'DESIGN' | 'CONTENT'>('CONTENT')
   const [brandSettings, setBrandSettings] = useState<BrandSettings>(DEFAULT_BRAND_SETTINGS)
@@ -289,6 +291,17 @@ export default function DashboardPage() {
         onSubmit={handleCreateCompany}
       />
 
+      {/* Company Settings Modal */}
+      {activeCompany && (
+        <CompanySettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          companyId={activeCompany.id}
+          companyName={activeCompany.name}
+          onUpdate={() => mutate()}
+        />
+      )}
+
       {/* Sidebar */}
       <aside className="w-[400px] flex flex-col border-r border-border bg-card z-20 shadow-2xl">
         <div className="p-6 border-b border-border flex items-center justify-between">
@@ -308,11 +321,11 @@ export default function DashboardPage() {
 
         {/* Company Selector */}
         {companies.length > 0 ? (
-          <div className="px-6 py-3 bg-primary/10 border-b border-primary/20">
+          <div className="px-6 py-3 bg-primary/10 border-b border-primary/20 flex items-center gap-2">
             <select
               value={activeCompanyId || ''}
               onChange={(e) => setActiveCompanyId(e.target.value)}
-              className="w-full bg-transparent text-sm font-bold text-primary border-none focus:outline-none cursor-pointer"
+              className="flex-1 bg-transparent text-sm font-bold text-primary border-none focus:outline-none cursor-pointer"
             >
               {companies.map((company: Company) => (
                 <option key={company.id} value={company.id} className="bg-card text-foreground">
@@ -320,6 +333,13 @@ export default function DashboardPage() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="p-2 text-primary hover:bg-primary/20 rounded-lg transition-colors"
+              title="Bedrijfsinstellingen"
+            >
+              <i className="fas fa-cog"></i>
+            </button>
           </div>
         ) : (
           <div className="px-6 py-3 bg-accent/10 border-b border-accent/20 text-sm text-accent">
@@ -473,11 +493,16 @@ export default function DashboardPage() {
                 </div>
               </section>
 
-              {/* Layout Selection */}
-              <section className="space-y-4">
-                <label className="text-xs font-bold text-muted-foreground uppercase block">Layout</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {LAYOUT_OPTIONS.map((layout) => (
+                  {/* Layout Selection */}
+                  <section className="space-y-4">
+                    <label className="text-xs font-bold text-muted-foreground uppercase block">Layout</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {LAYOUT_OPTIONS.filter(layout => {
+                        // Filter based on company's enabled layouts
+                        const enabledLayouts = activeCompany?.enabled_layouts as LayoutType[] | undefined
+                        if (!enabledLayouts) return true // Show all if not set
+                        return enabledLayouts.includes(layout.id)
+                      }).map((layout) => (
                     <button
                       key={layout.id}
                       onClick={() => handleLayoutChange(layout.id)}
