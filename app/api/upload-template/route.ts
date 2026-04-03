@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Upload to Vercel Blob with a unique filename
+    // Upload to Vercel Blob with a unique filename (private store)
     const filename = `templates/${companyId}/${layoutType}-${Date.now()}.${file.name.split('.').pop()}`
     const blob = await put(filename, file, {
-      access: 'public',
+      access: 'private',
     })
 
     // Check if template already exists for this layout
@@ -56,11 +56,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Update existing template
+      // Update existing template with pathname (for private blob access)
       const { error } = await supabase
         .from('custom_templates')
         .update({ 
-          image_url: blob.url,
+          image_url: blob.pathname,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingTemplate.id)
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to update template' }, { status: 500 })
       }
     } else {
-      // Create new template
+      // Create new template with pathname (for private blob access)
       const { error } = await supabase
         .from('custom_templates')
         .insert({
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           html: '',
           css: '',
           layout_type: layoutType,
-          image_url: blob.url,
+          image_url: blob.pathname,
           is_active: true
         })
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ url: blob.url })
+    return NextResponse.json({ pathname: blob.pathname })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })

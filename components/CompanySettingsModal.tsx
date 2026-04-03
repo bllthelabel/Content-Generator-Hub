@@ -159,6 +159,12 @@ export default function CompanySettingsModal({
     return templates.find(t => t.layout_type === layoutType)
   }
 
+  // Convert pathname to API URL for private blob access
+  const getImageUrl = (pathname?: string) => {
+    if (!pathname) return undefined
+    return `/api/file?pathname=${encodeURIComponent(pathname)}`
+  }
+
   if (!isOpen) return null
 
   return (
@@ -292,8 +298,9 @@ export default function CompanySettingsModal({
                         {/* Preview */}
                         <div className="w-20 h-20 rounded-lg border border-border overflow-hidden bg-secondary flex-shrink-0">
                           {hasImage ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img 
-                              src={template.image_url} 
+                              src={getImageUrl(template.image_url)} 
                               alt={layout.label}
                               className="w-full h-full object-cover"
                             />

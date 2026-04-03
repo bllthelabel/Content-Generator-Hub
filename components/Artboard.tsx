@@ -58,15 +58,23 @@ const Artboard = forwardRef<HTMLDivElement, ArtboardProps>(({
     color: isDarkMode ? '#ffffff' : '#111827',
   } as React.CSSProperties;
 
+  // Convert pathname to API URL for private blob access
+  const getImageUrl = (pathname?: string) => {
+    if (!pathname) return undefined
+    return `/api/file?pathname=${encodeURIComponent(pathname)}`
+  }
+
   const renderContent = () => {
     // If custom template has an image, render it as background with content overlay
     if (customTemplate?.image_url) {
+      const templateImageUrl = getImageUrl(customTemplate.image_url)
+      
       return (
         <div className="absolute inset-0 z-10">
           {/* Template background image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
-            src={customTemplate.image_url} 
+            src={templateImageUrl} 
             alt="Template" 
             className="w-full h-full object-cover"
             crossOrigin="anonymous"
